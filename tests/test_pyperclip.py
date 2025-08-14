@@ -6,7 +6,6 @@ import string
 import unittest
 
 from pyperclip import (
-    HAS_DISPLAY,
     PyperclipException,
     _executable_exists,
     init_dev_clipboard_clipboard,
@@ -145,7 +144,7 @@ class TestOSX(_TestClipboard):
 
 
 class TestQt(_TestClipboard):
-    if HAS_DISPLAY:
+    if os.getenv("DISPLAY"):
         try:
             import PyQt5.QtWidgets
         except ImportError:

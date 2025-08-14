@@ -117,6 +117,8 @@ def init_osx_pbcopy_clipboard():
 
 
 def init_osx_pyobjc_clipboard():
+    import AppKit
+    import Foundation
     def copy_osx_pyobjc(text):
         """Copy string argument to clipboard"""
         text = _PYTHON_STR_TYPE(text)  # Converts non-str values to str.
