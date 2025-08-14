@@ -4,4 +4,3 @@ from setuptools import setup
 # and to support older tools that might expect its presence.
 # All project metadata is now defined in pyproject.toml.
 setup()
-
