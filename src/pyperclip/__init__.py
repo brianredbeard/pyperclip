@@ -55,16 +55,14 @@ import time
 import warnings
 from ctypes import c_size_t, c_wchar, c_wchar_p, get_errno, sizeof
 
-_IS_RUNNING_PYTHON_2 = sys.version_info[0] == 2  # type: bool
-
 # For paste(): Python 3 uses str, Python 2 uses unicode.
-if _IS_RUNNING_PYTHON_2:
-    # mypy complains about `unicode` for Python 2, so we ignore the type error:
-    import __builtin__
-
-    _PYTHON_STR_TYPE = __builtin__.unicode  # type: ignore
-else:
+if sys.version_info >= (3, 0):
+    # Python 3
     _PYTHON_STR_TYPE = str
+else:
+    # Python 2
+    import __builtin__
+    _PYTHON_STR_TYPE = __builtin__.unicode  # type: ignore
 
 ENCODING = "utf-8"  # type: str
 
@@ -119,8 +117,8 @@ def init_osx_pbcopy_clipboard():
 
 
 def init_osx_pyobjc_clipboard():
-    import AppKit
-    import Foundation
+    import AppKit  # type: ignore
+    import Foundation  # type: ignore
     def copy_osx_pyobjc(text):
         """Copy string argument to clipboard"""
         text = _PYTHON_STR_TYPE(text)  # Converts non-str values to str.
@@ -145,9 +143,9 @@ def init_qt_clipboard():
 
     # Try to import from qtpy, but if that fails try PyQt5
     try:
-        from qtpy.QtWidgets import QApplication
+        from qtpy.QtWidgets import QApplication  # type: ignore
     except:
-        from PyQt5.QtWidgets import QApplication
+        from PyQt5.QtWidgets import QApplication  # type: ignore
 
     app = QApplication.instance()
     if app is None:
@@ -322,7 +320,7 @@ def init_no_clipboard():
                 + additionalInfo
             )
 
-        if _IS_RUNNING_PYTHON_2:
+        if sys.version_info < (3, 0):
 
             def __nonzero__(self):
                 return False
@@ -625,7 +623,7 @@ def determine_clipboard():
             # qtpy is a small abstraction layer that lets you write
             # applications using a single api call to either PyQt or PySide.
             # https://pypi.python.org/pypi/QtPy
-            import qtpy  # check if qtpy is installed
+            import qtpy  # type: ignore # check if qtpy is installed
 
             return init_qt_clipboard()
         except ImportError:
@@ -633,7 +631,7 @@ def determine_clipboard():
 
         # If qtpy isn't installed, fall back on importing PyQt5
         try:
-            import PyQt5  # check if PyQt5 is installed
+            import PyQt5  # type: ignore # check if PyQt5 is installed
 
             return init_qt_clipboard()
         except ImportError:
