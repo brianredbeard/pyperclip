@@ -62,6 +62,7 @@ if sys.version_info >= (3, 0):
 else:
     # Python 2
     import __builtin__
+
     _PYTHON_STR_TYPE = __builtin__.unicode  # type: ignore
 
 ENCODING = "utf-8"  # type: str
@@ -119,6 +120,7 @@ def init_osx_pbcopy_clipboard():
 def init_osx_pyobjc_clipboard():
     import AppKit  # type: ignore
     import Foundation  # type: ignore
+
     def copy_osx_pyobjc(text):
         """Copy string argument to clipboard"""
         text = _PYTHON_STR_TYPE(text)  # Converts non-str values to str.
