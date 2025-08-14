@@ -121,7 +121,7 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xclip xsel
+          sudo apt-get install -y xclip xsel xvfb
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos'
         run: |
@@ -129,8 +129,13 @@ jobs:
           which pbcopy || echo "pbcopy not found"
           which pbpaste || echo "pbpaste not found"
       - name: Run tests
+        if: matrix.os != 'linux'
         run: |
           uv run pytest tests/ -v --tb=short
+      - name: Run tests (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          xvfb-run --auto-servernum uv run pytest tests/ -v --tb=short
       - name: Run type checking (if mypy is available)
         run: |
           uv pip list | grep mypy && uv run mypy src/pyperclip/ || echo "mypy not available, skipping type checking"
