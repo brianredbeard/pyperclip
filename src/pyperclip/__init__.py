@@ -60,7 +60,9 @@ _IS_RUNNING_PYTHON_2 = sys.version_info[0] == 2  # type: bool
 # For paste(): Python 3 uses str, Python 2 uses unicode.
 if _IS_RUNNING_PYTHON_2:
     # mypy complains about `unicode` for Python 2, so we ignore the type error:
-    _PYTHON_STR_TYPE = unicode  # type: ignore
+    import __builtin__
+
+    _PYTHON_STR_TYPE = __builtin__.unicode  # type: ignore
 else:
     _PYTHON_STR_TYPE = str
 
