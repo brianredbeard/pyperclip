@@ -37,6 +37,10 @@ jobs:
             runs-on: ubuntu-latest
             python-version: '3.12'
             arch: amd64
+          - os: linux
+            runs-on: ubuntu-latest
+            python-version: '3.13'
+            arch: amd64
 
           # Linux ARM64 (using self-hosted or larger runners)
           # Note: GitHub hosted runners don't support ARM64 Linux
@@ -62,6 +66,14 @@ jobs:
             runs-on: macos-13
             python-version: '3.12'
             arch: amd64
+          - os: macos
+            runs-on: macos-13
+            python-version: '3.13'
+            arch: amd64
+          - os: macos
+            runs-on: macos-15
+            python-version: '3.13'
+            arch: amd64
 
           # macOS ARM64 (Apple Silicon)
           - os: macos
@@ -75,6 +87,14 @@ jobs:
           - os: macos
             runs-on: macos-latest
             python-version: '3.12'
+            arch: arm64
+          - os: macos
+            runs-on: macos-latest
+            python-version: '3.13'
+            arch: arm64
+          - os: macos
+            runs-on: macos-15
+            python-version: '3.13'
             arch: arm64
 
           # Windows AMD64
@@ -93,6 +113,10 @@ jobs:
           - os: windows
             runs-on: windows-latest
             python-version: '3.12'
+            arch: amd64
+          - os: windows
+            runs-on: windows-latest
+            python-version: '3.13'
             arch: amd64
     steps:
       - name: Checkout code
