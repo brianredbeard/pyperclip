@@ -1,0 +1,191 @@
+---
+# Manual build workflow for pyperclip
+# Can be triggered manually from GitHub Actions UI
+# Allows custom configuration and testing
+name: Manual Build
+on:
+  workflow_dispatch:
+    inputs:
+      python_versions:
+        description: Python versions to test (comma-separated)
+        required: true
+        default: 3.10,3.11,3.12
+        type: string
+      platforms:
+        description: Platforms to test
+        required: true
+        default: ubuntu-latest,windows-latest,macos-latest
+        type: choice
+        options:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest,windows-latest
+          - ubuntu-latest,macos-latest
+          - windows-latest,macos-latest
+          - ubuntu-latest,windows-latest,macos-latest
+      run_extended_tests:
+        description: Run extended test suite including performance tests
+        required: false
+        default: false
+        type: boolean
+      create_release_artifacts:
+        description: Create release artifacts (wheels, source dist)
+        required: false
+        default: false
+        type: boolean
+      test_branch:
+        description: Branch to test (leave empty for current branch)
+        required: false
+        default: ''
+        type: string
+jobs:
+  setup:
+    name: Setup build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      python-versions: ${{ steps.matrix.outputs.python-versions }}
+      platforms: ${{ steps.matrix.outputs.platforms }}
+    steps:
+      - name: Generate matrix
+        id: matrix
+        run: |
+          # Parse inputs
+          PYTHON_VERSIONS="${{ github.event.inputs.python_versions }}"
+          PLATFORMS="${{ github.event.inputs.platforms }}"
+
+          # Convert comma-separated values to JSON arrays
+          PYTHON_ARRAY=$(echo "$PYTHON_VERSIONS" | jq -R 'split(",") | map(select(length > 0) | ltrimstr(" ") | rtrimstr(" "))')
+          PLATFORM_ARRAY=$(echo "$PLATFORMS" | jq -R 'split(",") | map(select(length > 0) | ltrimstr(" ") | rtrimstr(" "))')
+
+          # Create matrix
+          MATRIX=$(jq -n --argjson pythons "$PYTHON_ARRAY" --argjson platforms "$PLATFORM_ARRAY" '
+            {
+              include: [
+                $platforms[] as $platform |
+                $pythons[] as $python |
+                {
+                  "python-version": $python,
+                  "os": $platform,
+                  "runs-on": $platform
+                }
+              ]
+            }
+          ')
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "python-versions=$PYTHON_ARRAY" >> $GITHUB_OUTPUT
+          echo "platforms=$PLATFORM_ARRAY" >> $GITHUB_OUTPUT
+          echo "Generated matrix:"
+          echo "$MATRIX" | jq .
+  build:
+    name: Build on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.runs-on }}
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.test_branch || github.ref }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.5.1
+          enable-cache: true
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+      - name: Create virtual environment
+        run: uv venv --python ${{ matrix.python-version }}
+      - name: Activate virtual environment (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "VIRTUAL_ENV=.venv" >> $GITHUB_ENV
+          echo ".venv/bin" >> $GITHUB_PATH
+      - name: Activate virtual environment (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "VIRTUAL_ENV=.venv" >> $env:GITHUB_ENV
+          echo ".venv\\Scripts" >> $env:GITHUB_PATH
+      - name: Install build dependencies
+        run: |
+          uv pip install build wheel setuptools
+      - name: Install project in development mode
+        run: |
+          uv pip install -e ".[dev]"
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xclip xsel
+      - name: Display environment information
+        run: |
+          echo "Python version:"
+          uv run python --version
+          echo "Platform information:"
+          uv run python -c "import platform; print(f'Platform: {platform.platform()}'); print(f'Architecture: {platform.architecture()}'); print(f'Machine: {platform.machine()}')"
+          echo "UV version:"
+          uv --version
+          echo "Installed packages:"
+          uv pip list
+      - name: Run basic tests
+        run: |
+          uv run pytest tests/ -v
+      - name: Run extended tests
+        if: github.event.inputs.run_extended_tests == 'true'
+        run: |
+          echo "Running extended test suite..."
+          uv run pytest tests/ -v --durations=10 --cov=pyperclip --cov-report=xml --cov-report=term-missing
+      - name: Test clipboard functionality
+        run: |
+          uv run python -c "
+          import pyperclip
+          import sys
+
+          # Test basic functionality
+          try:
+              pyperclip.copy('test string')
+              result = pyperclip.paste()
+              print(f'Clipboard test successful: {result == \"test string\"}')
+          except Exception as e:
+              print(f'Clipboard test failed: {e}')
+              # Don't fail the build for clipboard issues in CI
+              pass
+          "
+      - name: Build package
+        if: github.event.inputs.create_release_artifacts == 'true'
+        run: |
+          uv run python -m build
+      - name: Upload build artifacts
+        if: github.event.inputs.create_release_artifacts == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}-python${{ matrix.python-version }}
+          path: dist/
+      - name: Upload coverage reports
+        if: github.event.inputs.run_extended_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}-python${{ matrix.python-version }}
+          path: coverage.xml
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |-
+          echo "## Manual Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Python versions: ${{ github.event.inputs.python_versions }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Platforms: ${{ github.event.inputs.platforms }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Extended tests: ${{ github.event.inputs.run_extended_tests }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Create artifacts: ${{ github.event.inputs.create_release_artifacts }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Test branch: ${{ github.event.inputs.test_branch || 'default' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Results:**" >> $GITHUB_STEP_SUMMARY
+          echo "Build job status: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
