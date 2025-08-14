@@ -54,7 +54,6 @@ import sys
 import time
 import warnings
 from ctypes import c_size_t, c_wchar, c_wchar_p, get_errno, sizeof
-from typing import Optional, Union
 
 _IS_RUNNING_PYTHON_2 = sys.version_info[0] == 2  # type: bool
 
@@ -310,7 +309,6 @@ def init_dev_clipboard_clipboard():
 
 def init_no_clipboard():
     class ClipboardUnavailable(object):
-
         def __call__(self, *args, **kwargs):
             additionalInfo = ""
             if sys.platform == "linux":
@@ -349,9 +347,31 @@ class CheckedCall(object):
 
 
 def init_windows_clipboard():
-    global HGLOBAL, LPVOID, DWORD, LPCSTR, INT, HWND, HINSTANCE, HMENU, BOOL, UINT, HANDLE
-    from ctypes.wintypes import (BOOL, DWORD, HANDLE, HGLOBAL, HINSTANCE,
-                                 HMENU, HWND, INT, LPCSTR, LPVOID, UINT)
+    global \
+        HGLOBAL, \
+        LPVOID, \
+        DWORD, \
+        LPCSTR, \
+        INT, \
+        HWND, \
+        HINSTANCE, \
+        HMENU, \
+        BOOL, \
+        UINT, \
+        HANDLE
+    from ctypes.wintypes import (
+        BOOL,
+        DWORD,
+        HANDLE,
+        HGLOBAL,
+        HINSTANCE,
+        HMENU,
+        HWND,
+        INT,
+        LPCSTR,
+        LPVOID,
+        UINT,
+    )
 
     windll = ctypes.windll
     msvcrt = ctypes.CDLL("msvcrt")
@@ -506,7 +526,6 @@ def init_windows_clipboard():
 
 
 def init_wsl_clipboard():
-
     def copy_wsl(text):
         text = _PYTHON_STR_TYPE(text)  # Converts non-str values to str.
         p = subprocess.Popen(["clip.exe"], stdin=subprocess.PIPE, close_fds=True)
