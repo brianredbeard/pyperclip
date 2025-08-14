@@ -42,6 +42,14 @@ These functions also have a `timeout` argument to specify a number of seconds to
     pyperclip.PyperclipTimeoutException: waitForNewPaste() timed out after 5 seconds.
 
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   terminal_clipboard
+   continuous_integration
+
+
 Not Implemented Error
 =====================
 
