@@ -59,6 +59,8 @@ version = {attr = "pyperclip.__version__"}
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+[tool.isort]
+profile = "black"
 
 [tool.ruff]
 line-length = 88
