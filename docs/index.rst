@@ -8,6 +8,12 @@
 Welcome to Pyperclip's documentation!
 =====================================
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   terminal_clipboard
+
 Pyperclip provides a cross-platform Python module for copying and pasting text to the clipboard.
 
 To copy text to the clipboard, pass a string to ``pyperclip.copy()``. To paste the text from the clipboard, call ``pyperclip.paste()`` and the text will be returned as a string value.
@@ -47,12 +53,13 @@ Not Implemented Error
 
 You may get an error message that says: "Pyperclip could not find a copy/paste mechanism for your system. Please see https://pyperclip.readthedocs.io/en/latest/introduction.html#not-implemented-error for how to fix this."
 
-In order to work equally well on Windows, Mac, and Linux, Pyperclip uses various mechanisms to do this. Currently, this error should only appear on Linux (not Windows or Mac). You can fix this by installing one of the copy/paste mechanisms:
+In order to work on Windows, Mac, and Linux, Pyperclip uses various mechanisms. This error should now be rare on Linux systems when using a modern terminal emulator, as Pyperclip can use the **OSC 52** and **OSC 5522** control sequences. These work automatically over SSH and in many modern terminals without requiring any third-party packages.
+
+If you are on Linux and this feature is not supported by your terminal, you can fix this by installing one of the following copy/paste mechanisms:
 
 - ``sudo apt-get install xsel`` to install the ``xsel`` utility (for X11).
 - ``sudo apt-get install xclip`` to install the ``xclip`` utility (for X11).
 - ``sudo apt-get install wl-clipboard`` to install the ``wl-clipboard`` utility (for Wayland).
-- ``pip install gtk`` to install the gtk Python module.
 - ``pip install PyQt5`` to install the PyQt5 Python module.
 
 Pyperclip won't work on mobile operating systems such as Android or iOS, nor in browser-based interactive shells such as `replit.com <https://replit.com>`_, `pythontutor.com <http://pythontutor.com>`_, or `pythonanywhere.com <https://pythonanywhere.com>`_.

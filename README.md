@@ -22,9 +22,12 @@ On Windows, no additional modules are needed.
 
 On Mac, this module makes use of the pbcopy and pbpaste commands, which should come with the os.
 
-On Linux, this module makes use of the xclip or xsel commands, which should come with the os. Otherwise run "sudo apt-get install xclip" or "sudo apt-get install xsel" (Note: xsel does not always seem to work.)
+On Linux, this module makes use of the `xclip`, `xsel`, or `wl-clipboard` commands, which can be installed via your distribution's package manager. For example, in Debian:
+    sudo apt-get install xclip
+    sudo apt-get install xsel
+    sudo apt-get install wl-clipboard
 
-Otherwise on Linux, you will need the qtpy or PyQT5 modules installed.
+It can also use the `qtpy` or `PyQt5` Python modules. If none of these are found, this module will automatically fall back to the OSC 52 and 5522 terminal escape sequences, which work in many modern terminal emulators and remote SSH sessions without needing any additional packages.
 
 Support
 -------

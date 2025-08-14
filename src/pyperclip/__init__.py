@@ -16,13 +16,15 @@ Usage:
 On Windows, no additional modules are needed.
 On Mac, the pyobjc module is used, falling back to the pbcopy and pbpaste cli
     commands. (These commands should come with OS X.).
-On Linux, install xclip, xsel, or wl-clipboard (for "wayland" sessions) via package manager.
-For example, in Debian:
+On Linux, this module makes use of the xclip, xsel, or wl-clipboard commands, which
+can be installed via your distribution's package manager. For example, in Debian:
     sudo apt-get install xclip
     sudo apt-get install xsel
     sudo apt-get install wl-clipboard
 
-Otherwise on Linux, you will need the qtpy or PyQt5 modules installed.
+It can also use the qtpy or PyQt5 Python modules. If none of these are found, this
+module will automatically fall back to the OSC 52 and 5522 terminal escape
+sequences, which work in many modern terminal emulators and remote SSH sessions.
 
 This module does not work with PyGObject yet.
 
@@ -62,7 +64,7 @@ _IS_RUNNING_PYTHON_2 = sys.version_info[0] == 2  # type: bool
 # For paste(): Python 3 uses str, Python 2 uses unicode.
 if _IS_RUNNING_PYTHON_2:
     # mypy complains about `unicode` for Python 2, so we ignore the type error:
-    _PYTHON_STR_TYPE = unicode  # type: ignore
+    _PYTHON_STR_TYPE = unicode  # type: ignore # noqa: F821
 else:
     _PYTHON_STR_TYPE = str
 
@@ -111,6 +113,12 @@ def init_osx_pbcopy_clipboard():
 
 
 def init_osx_pyobjc_clipboard():
+    # Placing the imports inside init_osx_pyobjc_clipboard() ensures that the
+    # required modules are always loaded whenever this clipboard mechanism is
+    # initialized.
+    import Foundation
+    import AppKit
+
     def copy_osx_pyobjc(text):
         '''Copy string argument to clipboard'''
         text = _PYTHON_STR_TYPE(text) # Converts non-str values to str.
@@ -264,6 +272,104 @@ def init_klipper_clipboard():
     return copy_klipper, paste_klipper
 
 
+def init_osc52_clipboard():
+    def copy_osc52(text, primary=False):
+        """Copy text to clipboard using OSC 52."""
+        text = _PYTHON_STR_TYPE(text)
+        text_bytes = text.encode(ENCODING)
+        b64_text = base64.b64encode(text_bytes)
+
+        # OSC 52 is not supported by all terminals, and has a payload limit
+        # which can be as low as 76000 bytes. We will not check for this limit.
+        # Pasting is also not supported.
+        # See https://github.com/theimpostor/osc for more info.
+
+        selection = b'p' if primary else b'c'
+
+        # Construct the OSC 52 sequence's content, without the ESC Preamble.
+        osc52_content = b']52;' + selection + b';' + b64_text + b'\x07'
+
+        # If running inside tmux or screen, wrap the sequence for passthrough.
+        if os.environ.get('TMUX'):
+            # Tmux passthrough sequence. See https://github.com/tmux/tmux/wiki/FAQ
+            # What is the "passthrough" escape sequence and how do I use it?
+            osc52_sequence = b'\x1bPtmux;\x1b' + osc52_content + b'\x1b\\'
+        elif os.environ.get('TERM', '').startswith('screen'):
+            # Screen passthrough sequence
+            osc52_sequence = b'\x1bP\x1b' + osc52_content + b'\x1b\\'
+        else:
+            osc52_sequence = b'\x1b' + osc52_content
+
+        try:
+            with open('/dev/tty', 'wb') as f:
+                f.write(osc52_sequence)
+                f.flush()
+        except OSError:
+            # Fallback to stdout for environments where /dev/tty is not available
+            sys.stdout.buffer.write(osc52_sequence)
+            sys.stdout.buffer.flush()
+
+    def paste_osc52(primary=False):
+        """Paste is not supported for OSC 52 in Pyperclip."""
+        raise PyperclipException('OSC 52 paste is not currently supported by Pyperclip.')
+
+    return copy_osc52, paste_osc52
+
+
+def init_osc5522_clipboard():
+    def copy_osc5522(text, primary=False):
+        """Copy text to clipboard using OSC 5522."""
+        text = _PYTHON_STR_TYPE(text)
+        text_bytes = text.encode(ENCODING)
+
+        def write_to_tty(data):
+            try:
+                with open('/dev/tty', 'wb') as f:
+                    f.write(data)
+                    f.flush()
+            except OSError:
+                # Fallback to stdout for environments where /dev/tty is not available
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
+
+        def send_osc5522_sequence(payload):
+            # See: https://sw.kovidgoyal.net/kitty/clipboard/#writing-to-the-clipboard
+            content = b']5522;' + payload
+
+            if os.environ.get('TMUX'):
+                sequence = b'\x1bPtmux;\x1b' + content + b'\x1b\\'
+            elif os.environ.get('TERM', '').startswith('screen'):
+                sequence = b'\x1bP\x1b' + content + b'\x1b\\'
+            else:
+                sequence = b'\x1b' + content + b'\x1b\\'
+
+            write_to_tty(sequence)
+
+        # Start write
+        loc = b':loc=primary' if primary else b''
+        send_osc5522_sequence(b'type=write' + loc)
+
+        # Write data in chunks
+        chunk_size = 4096
+        if not text_bytes:
+            send_osc5522_sequence(b'type=wdata:mime=text/plain;')
+        else:
+            for i in range(0, len(text_bytes), chunk_size):
+                chunk = text_bytes[i:i+chunk_size]
+                b64_chunk = base64.b64encode(chunk)
+                send_osc5522_sequence(b'type=wdata:mime=text/plain;' + b64_chunk)
+
+        # End write
+        send_osc5522_sequence(b'type=wdata')
+
+
+    def paste_osc5522(primary=False):
+        """Paste is not supported for OSC 5522 in Pyperclip."""
+        raise PyperclipException('OSC 5522 paste is not currently supported by Pyperclip.')
+
+    return copy_osc5522, paste_osc5522
+
+
 def init_dev_clipboard_clipboard():
     def copy_dev_clipboard(text):
         text = _PYTHON_STR_TYPE(text) # Converts non-str values to str.
@@ -291,7 +397,7 @@ def init_no_clipboard():
         def __call__(self, *args, **kwargs):
             additionalInfo = ''
             if sys.platform == 'linux':
-                additionalInfo = '\nOn Linux, you can run `sudo apt-get install xclip` or `sudo apt-get install xselect` to install a copy/paste mechanism.'
+                additionalInfo = '\nOn Linux, you can run `sudo apt-get install xclip` or `sudo apt-get install xsel` to install a copy/paste mechanism.'
             raise PyperclipException('Pyperclip could not find a copy/paste mechanism for your system. For more information, please visit https://pyperclip.readthedocs.io/en/latest/index.html#not-implemented-error' + additionalInfo)
 
         if _IS_RUNNING_PYTHON_2:
@@ -531,12 +637,15 @@ def determine_clipboard():
 
     # Setup for the LINUX platform:
 
+    if os.getenv('KITTY_WINDOW_ID'):
+        return init_osc5522_clipboard()
+
     if os.getenv("WAYLAND_DISPLAY") and _executable_exists("wl-copy")  and _executable_exists("wl-paste"):
         return init_wl_clipboard()
 
-    # `import PyQt4` sys.exit()s if DISPLAY is not in the environment.
+    # `import qtpy` or `import PyQt5` can cause unexpected issues if DISPLAY is not in the environment.
     # Thus, we need to detect the presence of $DISPLAY manually
-    # and not load PyQt4 if it is absent.
+    # and not load these modules if it is absent.
     elif os.getenv("DISPLAY"):
         if _executable_exists("xclip"):
             # Note: 2024/06/18 Google Trends shows xclip as more popular than xsel.
@@ -561,6 +670,11 @@ def determine_clipboard():
             return init_qt_clipboard()
         except ImportError:
             pass
+
+    # Fallback for Linux, if no display server is detected
+    # and we are in a terminal, we can try OSC 52.
+    if sys.stdout.isatty() and (os.getenv('SSH_CONNECTION') or os.getenv('TMUX')):
+        return init_osc52_clipboard()
 
     return init_no_clipboard()
 
@@ -589,6 +703,8 @@ def set_clipboard(clipboard):
         "xsel": init_xsel_clipboard,
         "wl-clipboard": init_wl_clipboard,
         "klipper": init_klipper_clipboard,
+        "osc52": init_osc52_clipboard,
+        "osc5522": init_osc5522_clipboard,
         "windows": init_windows_clipboard,
         "no": init_no_clipboard,
     }
