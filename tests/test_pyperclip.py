@@ -178,11 +178,11 @@ class TestNoClipboard(unittest.TestCase):
     copy, paste = init_no_clipboard()
 
     def test_copy(self):
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(PyperclipException):
             self.copy("foo")
 
     def test_paste(self):
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(PyperclipException):
             self.paste()
 
 
