@@ -1,15 +1,9 @@
 [build-system]
-requires = ["poetry-core>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-# This section is for poetry-specific configuration
-[tool.poetry]
-packages = [{include = "pyperclip", from = "src"}]
-
-# This section is the standardized PEP 621 project metadata
 [project]
 name = "pyperclip"
-version = "1.9.0"
 description = "A cross-platform clipboard module for Python. (Only handles plain text for now.)"
 authors = [
     {name = "Al Sweigart", email = "al@inventwithpython.com"},
@@ -30,8 +24,6 @@ classifiers=[
     'Programming Language :: Python :: 2',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
@@ -41,6 +33,7 @@ classifiers=[
     'Programming Language :: Python :: 3.13',
 ]
 dependencies = []
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/asweigart/pyperclip"
@@ -60,3 +53,9 @@ dev = [
     "safety>=2.0; python_version >= '3.8'",
     "coverage>=6.0; python_version >= '3.8'",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "pyperclip.__version__"}
+
+[tool.setuptools]
+package-dir = {"" = "src"}
