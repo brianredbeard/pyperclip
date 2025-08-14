@@ -107,12 +107,13 @@ class _TestClipboard(unittest.TestCase):
         self.copy(False)
         self.assertEqual(self.paste(), "False")
 
-        # All other non-str values raise an exception.
-        with self.assertRaises(PyperclipException):
-            self.copy(None)
+        # Test copying None.
+        self.copy(None)
+        self.assertEqual(self.paste(), "None")
 
-        with self.assertRaises(PyperclipException):
-            self.copy([2, 4, 6, 8])
+        # Test copying a list.
+        self.copy([2, 4, 6, 8])
+        self.assertEqual(self.paste(), "[2, 4, 6, 8]")
 
 
 class TestCygwin(_TestClipboard):
