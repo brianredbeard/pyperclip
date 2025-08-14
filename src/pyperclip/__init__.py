@@ -53,10 +53,8 @@ import subprocess
 import sys
 import time
 import warnings
-
-from ctypes import c_size_t, sizeof, c_wchar_p, get_errno, c_wchar
-from typing import Union, Optional
-
+from ctypes import c_size_t, c_wchar, c_wchar_p, get_errno, sizeof
+from typing import Optional, Union
 
 _IS_RUNNING_PYTHON_2 = sys.version_info[0] == 2  # type: bool
 
@@ -352,19 +350,8 @@ class CheckedCall(object):
 
 def init_windows_clipboard():
     global HGLOBAL, LPVOID, DWORD, LPCSTR, INT, HWND, HINSTANCE, HMENU, BOOL, UINT, HANDLE
-    from ctypes.wintypes import (
-        HGLOBAL,
-        LPVOID,
-        DWORD,
-        LPCSTR,
-        INT,
-        HWND,
-        HINSTANCE,
-        HMENU,
-        BOOL,
-        UINT,
-        HANDLE,
-    )
+    from ctypes.wintypes import (BOOL, DWORD, HANDLE, HGLOBAL, HINSTANCE,
+                                 HMENU, HWND, INT, LPCSTR, LPVOID, UINT)
 
     windll = ctypes.windll
     msvcrt = ctypes.CDLL("msvcrt")
@@ -583,8 +570,8 @@ def determine_clipboard():
     # Setup for the MAC OS X platform:
     if os.name == "mac" or platform.system() == "Darwin":
         try:
-            import Foundation  # check if pyobjc is installed
             import AppKit
+            import Foundation  # check if pyobjc is installed
         except ImportError:
             return init_osx_pbcopy_clipboard()
         else:

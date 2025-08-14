@@ -1,5 +1,6 @@
-import pyperclip
 import sys
+
+import pyperclip
 
 if len(sys.argv) > 1 and sys.argv[1] in ("-c", "--copy"):
     if len(sys.argv) > 2:

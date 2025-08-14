@@ -1,29 +1,22 @@
 # coding: utf-8
-import string
-import unittest
-import random
 import os
 import platform
+import random
+import string
+import unittest
+
+from pyperclip import (HAS_DISPLAY, PyperclipException, _executable_exists,
+                       init_dev_clipboard_clipboard, init_klipper_clipboard,
+                       init_no_clipboard, init_osx_pbcopy_clipboard,
+                       init_osx_pyobjc_clipboard, init_qt_clipboard,
+                       init_windows_clipboard, init_wl_clipboard,
+                       init_wsl_clipboard, init_xclip_clipboard,
+                       init_xsel_clipboard)
 
 # import sys
 # sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from pyperclip import _executable_exists, HAS_DISPLAY
-from pyperclip import (
-    init_osx_pbcopy_clipboard,
-    init_osx_pyobjc_clipboard,
-    init_dev_clipboard_clipboard,
-    init_qt_clipboard,
-    init_xclip_clipboard,
-    init_xsel_clipboard,
-    init_wl_clipboard,
-    init_klipper_clipboard,
-    init_no_clipboard,
-)
-from pyperclip import init_windows_clipboard
-from pyperclip import init_wsl_clipboard
 
-from pyperclip import PyperclipException
 
 random.seed(42)  # Make the "random" tests reproducible.
 
@@ -135,8 +128,8 @@ class TestWSL(_TestClipboard):
 class TestOSX(_TestClipboard):
     if os.name == "mac" or platform.system() == "Darwin":
         try:
-            import Foundation  # check if pyobjc is installed
             import AppKit
+            import Foundation  # check if pyobjc is installed
         except ImportError:
             clipboard = init_osx_pbcopy_clipboard()  # TODO
         else:
