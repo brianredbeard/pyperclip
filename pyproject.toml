@@ -59,3 +59,14 @@ version = {attr = "pyperclip.__version__"}
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]  # Enable error, warning, and import checks
+ignore = ["E501"]  # Let formatter handle line length
+
+[tool.ruff.format]
+# Same style as Black
